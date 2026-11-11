@@ -31,7 +31,7 @@ RUN apt-get update \
 RUN python - <<'EOF'
 import io, os, platform, urllib.request, zipfile
 arch = {"x86_64": "x86_64", "aarch64": "aarch64"}[platform.machine()]
-url = f"https://github.com/denoland/deno/releases/latest/download/deno-{arch}-unknown-linux-musl.zip"
+url = f"https://github.com/denoland/deno/releases/latest/download/deno-{arch}-unknown-linux-gnu.zip"
 with urllib.request.urlopen(url) as r, zipfile.ZipFile(io.BytesIO(r.read())) as z:
     z.extract("deno", "/usr/local/bin")
 os.chmod("/usr/local/bin/deno", 0o755)
