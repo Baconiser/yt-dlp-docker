@@ -1,0 +1,21 @@
+# yt-dlp Docker image - compose usage
+#
+#   docker compose build                          # build locally
+#   docker compose run --rm yt-dlp <URL>          # download into ./downloads
+#   docker compose run --rm yt-dlp yt-dlp --version
+#   docker compose run --rm yt-dlp bash           # arbitrary command
+#
+# Or use a CI-published image instead of building:
+#   image: ghcr.io/<OWNER>/<REPO>/yt-dlp:latest   # uncomment "image:", comment "build:"
+
+services:
+  yt-dlp:
+    build: .
+    image: yt-dlp:latest
+    # image: ghcr.io/<OWNER>/<REPO>/yt-dlp:latest
+    volumes:
+      - ./downloads:/downloads
+    environment:
+      AUTOUPDATE: "1"
+      YTDLP_CHANNEL: stable
+    stdin_open: true

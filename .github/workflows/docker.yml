@@ -1,0 +1,81 @@
+name: Build & push yt-dlp image
+
+# Rebuilds the image whenever main is pushed to, manually, or once per day.
+# The daily run keeps the baked-in yt-dlp current even if nobody pushes;
+# the entrypoint in the image re-checks PyPI at every container start too.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 5 * * *" # daily 05:23 UTC
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve latest stable yt-dlp version
+        id: ver
+        run: |
+          VER="$(curl -fsSL https://pypi.org/pypi/yt-dlp/json | jq -r '.info.version')"
+          if [ -z "$VER" ] || [ "$VER" = "null" ]; then
+            echo "Could not resolve latest yt-dlp version from PyPI" >&2
+            exit 1
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "Latest yt-dlp on PyPI: $VER"
+
+      - name: Compute image name (GHCR requires lowercase)
+        id: img
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}/yt-dlp" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # On daily runs, skip the build when this exact version tag is already
+      # published (push/workflow_dispatch always build).
+      - name: Version gate
+        id: gate
+        if: github.event_name == 'schedule'
+        run: |
+          if docker manifest inspect "${{ steps.img.outputs.name }}:${{ steps.ver.outputs.version }}" >/dev/null 2>&1; then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "Image for yt-dlp ${{ steps.ver.outputs.version }} already published - skipping."
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.img.outputs.name }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ steps.ver.outputs.version }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        if: steps.gate.outputs.build != 'false'
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

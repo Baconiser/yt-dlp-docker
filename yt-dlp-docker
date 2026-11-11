@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+# Convenience wrapper: run the yt-dlp image like a native binary.
+#
+#   ./yt-dlp-docker <URL>
+#   ./yt-dlp-docker -f "bv*+ba/b" --embed-thumbnail <URL>
+#   ./yt-dlp-docker yt-dlp --version
+#   ./yt-dlp-docker bash
+#
+# Files land in the current directory (mounted at /downloads in the container).
+#
+# Env overrides:
+#   YTDLP_IMAGE       image to run            (default: yt-dlp:latest)
+#   YTDLP_AUTOUPDATE  pass through AUTOUPDATE (e.g. YTDLP_AUTOUPDATE=0)
+set -e
+
+IMG="${YTDLP_IMAGE:-yt-dlp:latest}"
+TTY=""
+[ -t 0 ] && [ -t 1 ] && TTY="-t"
+
+exec docker run --rm -i $TTY \
+    -v "$(pwd):/downloads" \
+    -w /downloads \
+    -u "$(id -u):$(id -g)" \
+    -e HOME=/tmp \
+    ${YTDLP_AUTOUPDATE:+-e AUTOUPDATE="$YTDLP_AUTOUPDATE"} \
+    "$IMG" "$@"
