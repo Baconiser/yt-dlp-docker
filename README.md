@@ -10,7 +10,7 @@ A Docker image that always runs the **latest stable yt-dlp**, kept fresh by two 
 
 ```
 yt-dlp-docker/
-├── Dockerfile                       # python:3.13-slim + ffmpeg + yt-dlp[default]
+├── Dockerfile                       # python:3.13-slim + ffmpeg + Deno + yt-dlp[default]
 ├── entrypoint.sh                    # runtime auto-update + command dispatch
 ├── .dockerignore
 ├── docker-compose.yml               # compose example
@@ -101,7 +101,7 @@ docker run --rm -e AUTOUPDATE=0 -v "$PWD:/downloads" yt-dlp:latest <URL>
 - **`python:3.13-slim`** (Debian) base, amd64.
 - **ffmpeg** from apt — required for merging `bv*+ba` streams and for embedding thumbnails/metadata.
 - **`yt-dlp[default]`** pip extras — brotli, certifi, mutagen, pycryptodomex, requests/urllib3, websockets; also pulls **yt-dlp-ejs** (yt-dlp's YouTube JS-challenge engine).
-- No JavaScript runtime — for some YouTube scenarios yt-dlp wants one (deno or node). If you ever need it, add `nodejs` to the `apt-get install` line in the Dockerfile.
+- **Deno** (static binary, latest release, amd64 + arm64) — the JavaScript runtime yt-dlp-ejs needs to solve YouTube's JS challenges for robust extraction. Deno's cache goes to `$HOME/.cache/deno`, i.e. under `/config`, which is writable for root and non-root users alike.
 
 ## Notes & troubleshooting
 
